@@ -3,10 +3,9 @@
 #include <time.h>
 #include <math.h>
 
-
-#define SIZE       8
 #define PI         3.141592653589793
-#define TWO_PI     (2.0 * PI)
+#define PI2     (2.0 * PI)
+#define SIZE       8
 #define SWAP(a,b)  tempr=(a);(a)=(b);(b)=tempr
 
 char chunkID[5];
@@ -28,8 +27,8 @@ int subChunk2Size;
 
 short* data;
 
-float impulseResponse[460000];
-float sizeImpulse;
+float impulseResp[460000];
+float impulseSize;
 void print()
 {
 	chunkID[5] = '\0';
@@ -132,9 +131,9 @@ int loadWave(char* filename, char* impulse)
 		}
 		
 		fseek(pulse, 0, SEEK_END);
-		sizeImpulse = ftell(pulse);
-		printf("impulse size %f\n", sizeImpulse);
-		fread(impulseResponse, 1, sizeImpulse, pulse);
+		impulseSize = ftell(pulse);
+		printf("impulse size %f\n", impulseSize);
+		fread(impulseResp, 1, impulseSize, pulse);
 		
 		fclose(in);
 		printf("Closing %s...\n",filename);
@@ -187,18 +186,12 @@ int saveWave(char* filename)
 		//impulse response - echo
 		int IRSize = 12;
 		float IR[IRSize];
-		IR[0] = 1.0;
-		IR[1] = 1.0;
-		IR[2] = 0.0;
-		IR[3] = 1.0;
-		IR[4] = 1.0;
-		IR[5] = 0.5;
-		IR[6] = 1.0;
-		IR[7] = 0.5;
-		IR[8] = 0.5;
-		IR[9] = 0.5;
-		IR[10] = 2.0;
-		IR[11] = 1.0;
+		for(p = 0; p < IRSize; p++)
+		{
+			IR[p] = 0.7;
+			
+		}
+		
 		
 		
 		//write the data
@@ -229,7 +222,12 @@ int saveWave(char* filename)
 				a[k] = b[k] = 0.0;
 				for (n = 0, nn = 0; n < IRSize; n++, nn += 2) {
 					a[k] += (newData[nn] * cos(omega * n * i));
+					
+				for (n = 0, nn = 0; n < IRSize; n++, nn += 2)
+				{
 					b[k] -= (newData[nn] * sin(omega * n * i));
+				}
+					
 					
 				}
 				i++;
@@ -270,16 +268,9 @@ int loadImpulse(char* filename)
 {
 	FILE* in = fopen(filename, "rb");
 	fseek(in, 0, SEEK_END);
-	sizeImpulse = ftell(in);
-	printf("here %f\n", sizeImpulse);
-	fread(impulseResponse, 1, sizeImpulse, in);
-	/*
-	impulseResponse[0] = 1.0;
-	impulseResponse[1] = 1.0;
-	impulseResponse[2] = 0.0;
-	impulseResponse[3] = 1.0;
-	impulseResponse[4] = 0.5;
-	impulseResponse[5] = 0.5;*/
+	impulseSize = ftell(in);
+	printf("here %f\n", impulseSize);
+	fread(impulseResp, 1, impulseSize, in);
 	return 1;
 }
 
@@ -288,8 +279,8 @@ int main(int argc, char* argv[])
 	char* filename = argv[1];
 	char* impulse = argv[2];
 	char* outFilename = "outDFT.wav";
-	clock_t start, end;
-	double total;
+	clock_t startTime, endTime;
+	double totalTime;
 	
 	if(argc == 4)
 		outFilename = argv[2];
@@ -303,12 +294,14 @@ int main(int argc, char* argv[])
 	if(loadWave(filename, impulse))
 	{
 		print();
-		start = clock();
+		
+		startTime = clock();
 		saveWave(outFilename);
-		end = clock();
+		endTime = clock();
+		
 		free(data);		
-		total = (double)(end - start) / CLOCKS_PER_SEC;
-		printf("total time taken: %f\n", total);
+		totalTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+		printf("total time: %f\n", totalTime);
 	}
 	else
 		return -1;
