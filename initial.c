@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 char chunkID[5];
 int chunkSize;
@@ -19,6 +20,9 @@ char subChunk2ID[5];
 int subChunk2Size;
 
 short* data;
+
+float impulseResp[460000];
+float impulseSize;
 
 void print()
 {
@@ -43,10 +47,11 @@ void print()
 	printf(" subChunk2Size:%d\n", subChunk2Size);
 }
 
-int loadWave(char* filename)
+int loadWave(char* filename, char* impulse)
 {
 	FILE* in = fopen(filename, "rb");
-
+	FILE* pulse = fopen(impulse, "rb");
+	
 	if (in != NULL)
 	{		
 		printf("Reading %s...\n",filename);
@@ -90,6 +95,11 @@ int loadWave(char* filename)
 			data[i++] = sample;
 			sample = 0;			
 		}
+		
+		fseek(pulse, 0, SEEK_END);
+		impulseSize = ftell(pulse);
+		printf("here %f\n", impulseSize);
+		fread(impulseResp, 1, impulseSize, pulse);
 		
 		fclose(in);
 		printf("Closing %s...\n",filename);
@@ -144,10 +154,16 @@ int saveWave(char* filename)
 		float IR[IRSize];
 		IR[0] = 1.0;
 		IR[1] = 1.0;
-		IR[2] = 1.0;
+		IR[2] = 0.0;
 		IR[3] = 1.0;
 		IR[4] = 1.0;
-		IR[5] = 1.0;
+		IR[5] = 0.5;
+		IR[6] = 1.0;
+		IR[7] = 0.5;
+		IR[8] = 0.5;
+		IR[9] = 0.5;
+		IR[10] = 2.0;
+		IR[11] = 1.0;
 		
 		//write the data
 		float* newData = (float*) malloc(sizeof(float) * (sampleCount + IRSize - 1));
@@ -188,10 +204,25 @@ int saveWave(char* filename)
 	return 1;
 }
 
+int loadImpulse(char* filename)
+{
+	FILE* in = fopen(filename, "rb");
+	fseek(in, 0, SEEK_END);
+	impulseSize = ftell(in);
+	printf("impulse %f\n", impulseSize);
+	fread(impulseResp, 1, impulseSize, in);
+
+	return 1;
+}
+
 int main(int argc, char* argv[])
 {
 	char* filename = argv[1];
+	char* impulse = argv[2];
 	char* outFilename = "out.wav";
+	
+	clock_t startTime, endTime;
+	double totalTime;
 	
 	if(argc == 3)
 		outFilename = argv[2];
@@ -204,8 +235,14 @@ int main(int argc, char* argv[])
 	if(loadWave(filename))
 	{
 		print();
+		
+		startTime = clock();
 		saveWave(outFilename);
+		endTime = clock();
+		
 		free(data);		
+		totalTime = (double)(endTime - startTime) / CLOCKS_PER_SEC;
+		printf("total time of algorithm: %f\n", totalTime);
 	}
 	else
 		return -1;
